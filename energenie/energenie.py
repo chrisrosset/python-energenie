@@ -10,7 +10,18 @@ BIT4 = 27
 ON_OFF_KEY = 24
 ENABLE = 25
 
-GPIO.setmode(GPIO.BCM if GPIO.RPI_REVISION != 1 else GPIO.BOARD)
+if GPIO.RPI_REVISION == 1:
+    GPIO.setmode(GPIO.BOARD)
+    ON_OFF_KEY = 18
+    ENABLE = 22
+    
+    BIT1 = 11
+    BIT2 = 15
+    BIT3 = 16
+    BIT4 = 13
+else:
+    GPIO.setmode(GPIO.BCM)
+
 GPIO.setwarnings(False)
 
 GPIO.setup(BIT1, GPIO.OUT)
