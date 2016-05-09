@@ -1,64 +1,47 @@
 import RPi.GPIO as GPIO
 from time import sleep
 
-# The GPIO pins for the Energenie module
-BIT1 = 17
-BIT2 = 22
-BIT3 = 23
-BIT4 = 27
-
-ON_OFF_KEY = 24
-ENABLE = 25
-
-if GPIO.RPI_REVISION == 1:
-    GPIO.setmode(GPIO.BOARD)
-    ON_OFF_KEY = 18
-    ENABLE = 22
-    
-    BIT1 = 11
-    BIT2 = 15
-    BIT3 = 16
-    BIT4 = 13
-else:
-    GPIO.setmode(GPIO.BCM)
-
-GPIO.setwarnings(False)
-
-GPIO.setup(BIT1, GPIO.OUT)
-GPIO.setup(BIT2, GPIO.OUT)
-GPIO.setup(BIT3, GPIO.OUT)
-GPIO.setup(BIT4, GPIO.OUT)
-
-GPIO.setup(ON_OFF_KEY, GPIO.OUT)
-GPIO.setup(ENABLE, GPIO.OUT)
-
-GPIO.output(ON_OFF_KEY, False)
-GPIO.output(ENABLE, False)
-
-GPIO.output(BIT1, False)
-GPIO.output(BIT2, False)
-GPIO.output(BIT3, False)
-GPIO.output(BIT4, False)
-
 # Codes for switching on and off the sockets
-#       all     1       2       3       4
-ON = ['1011', '1111', '1110', '1101', '1100']
+#        all     1       2       3       4
+ON  = ['1011', '1111', '1110', '1101', '1100']
 OFF = ['0011', '0111', '0110', '0101', '0100']
 
+# The GPIO pins for the Energenie module
+BITS = {
+    "rev1" : {
+        "bits" : [ 11, 15, 16, 13 ],
+        "on_off" : 18,
+        "enable" : 22,
+        "gpio" : GPIO.BOARD
+    },
+    "other" : {
+        "bits" : [ 17, 22, 23, 27 ],
+        "on_off" : 24,
+        "enable" : 25,
+        "gpio" : GPIO.BCM
+    }
+}
+
+config = BITS["rev1" if GPIO.RPI_REVISION == 1 else "other"]
+config["pins"] = config["bits"] + [ config["on_off"], config["enable"] ]
+
+GPIO.setmode(config["gpio"])
+GPIO.setwarnings(False)
+
+# Initial pin setup
+[ GPIO.setup(b, GPIO.OUT) for b in config["pins"] ]
+[ GPIO.output(b, False)   for b in config["pins"] ]
 
 def change_plug_state(socket, on_or_off):
-    state = on_or_off[socket][3] == '1'
-    GPIO.output(BIT1, state)
-    state = on_or_off[socket][2] == '1'
-    GPIO.output(BIT2, state)
-    state = on_or_off[socket][1] == '1'
-    GPIO.output(BIT3, state)
-    state = on_or_off[socket][0] == '1'
-    GPIO.output(BIT4, state)
+    total = len(config["bits"])
+    for i in range(total):
+        GPIO.output(config["bits"][i], on_or_off[socket][total - i - 1] == '1')
+        
+    
     sleep(0.1)
-    GPIO.output(ENABLE, True)
+    GPIO.output(config["enable"], True)
     sleep(0.25)
-    GPIO.output(ENABLE, False)
+    GPIO.output(config["enable"], False)
 
 
 def switch_on(socket=0):
